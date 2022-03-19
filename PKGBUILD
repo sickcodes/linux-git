@@ -1,3 +1,5 @@
+# Maintainer: Sick Codes <info@sick.codes>
+# Maintainer: osimarr <dacohen@pm.me>
 # Maintainer: Jonathan Wright <jon@than.io>
 # Contributor: Boohbah <boohbah at gmail.com>
 # Contributor: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
@@ -5,35 +7,42 @@
 pkgbase=linux-git
 pkgver=5.10rc2.r81.g4ef8451b3326
 pkgrel=1
-pkgdesc='Linux (Git)'
-url="https://www.kernel.org"
-arch=(x86_64)
+_pkgrel=mainline
+pkgdesc='Linux-git: mainline latest build from kernel.org. No Documentation.'
+url="https://www.kernel.org/"
+arch=('any')
 license=(GPL2)
 makedepends=(
-  bc kmod libelf git pahole
+  bc kmod libelf git pahole curl
   xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
 )
 options=('!strip')
 _srcname=linux
-source=(
-  'git+https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux'
-  config         # the main kernel config file
-)
-sha256sums=('SKIP'
-            'a01c8ef3463c239f868fa679006bc591b1a088274dde8c9c162440dd0547ccad')
+source=('https://www.kernel.org/feeds/kdist.xml')
+sha256sums=('SKIP')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
 pkgver() {
-  cd $_srcname
-
-  git describe --long | sed -E 's/^v//;s/([^-]*-g)/r\1/;s/-/./g;s/\.rc/rc/'
+  cd "${_pkgname}"
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 prepare() {
-  cd $_srcname
+
+  # get latest release
+  _release="$(curl https://www.kernel.org/feeds/kdist.xml \
+    | grep -m1 -Po "(?<=<item><title>)(.+?)(?=: $_pkgver)")"
+
+  cd "${_srcname}"
+
+  curl -L "https://git.kernel.org/torvalds/t/linux-${_release}.tar.gz" | tar -xzvf -
+
+  # fetch current working config
+  touch config
+  zcat /etc/config.gz >> config
 
   echo "Setting version..."
   scripts/setlocalversion --save-scmversion
@@ -60,7 +69,7 @@ prepare() {
 build() {
   cd $_srcname
   make all
-  make htmldocs
+  # make htmldocs
 }
 
 _package() {
@@ -136,8 +145,8 @@ _package-headers() {
     rm -r "$arch"
   done
 
-  echo "Removing documentation..."
-  rm -r "$builddir/Documentation"
+  # echo "Removing documentation..."
+  # rm -r "$builddir/Documentation"
 
   echo "Removing broken symlinks..."
   find -L "$builddir" -type l -printf 'Removing %P\n' -delete
@@ -188,7 +197,7 @@ _package-docs() {
 }
 
 
-pkgname=("$pkgbase" "$pkgbase-headers" "$pkgbase-docs")
+pkgname=("$pkgbase" "$pkgbase-headers") # "$pkgbase-docs")
 for _p in "${pkgname[@]}"; do
   eval "package_$_p() {
     $(declare -f "_package${_p#$pkgbase}")
