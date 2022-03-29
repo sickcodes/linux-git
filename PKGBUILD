@@ -5,7 +5,7 @@
 # Contributor: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgbase=linux-git
-pkgver=5.10rc2.r81.g4ef8451b3326
+pkgver=r126.5864dba
 pkgrel=1
 _pkgrel=mainline
 pkgdesc='Linux-git: mainline latest build from kernel.org. No Documentation.'
@@ -17,9 +17,15 @@ makedepends=(
   xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
 )
 options=('!strip')
-_srcname=linux
-source=('https://www.kernel.org/feeds/kdist.xml')
-sha256sums=('SKIP')
+_srcname=linux-${_release}
+_release="$(curl https://www.kernel.org/feeds/kdist.xml \
+    | grep -m1 -Po "(?<=<item><title>)(.+?)(?=: $_pkgver)")"
+
+source=('https://www.kernel.org/feeds/kdist.xml'
+  "https://git.kernel.org/torvalds/t/linux-${_release}.tar.gz")
+sha256sums=('SKIP'
+  'SKIP')
+
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -33,16 +39,11 @@ pkgver() {
 prepare() {
 
   # get latest release
-  _release="$(curl https://www.kernel.org/feeds/kdist.xml \
-    | grep -m1 -Po "(?<=<item><title>)(.+?)(?=: $_pkgver)")"
-
-  cd "${_srcname}"
-
-  curl -L "https://git.kernel.org/torvalds/t/linux-${_release}.tar.gz" | tar -xzvf -
+  cd linux-${_release}
 
   # fetch current working config
   touch config
-  zcat /etc/config.gz >> config
+  zcat /proc/config.gz >> config
 
   echo "Setting version..."
   scripts/setlocalversion --save-scmversion
@@ -59,7 +60,7 @@ prepare() {
   done
 
   echo "Setting config..."
-  cp ../config .config
+  # cp ../config .config
   make olddefconfig
 
   make -s kernelrelease > version
