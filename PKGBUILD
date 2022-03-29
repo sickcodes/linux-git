@@ -5,7 +5,7 @@
 # Contributor: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgbase=linux-git
-pkgver=r126.5864dba
+pkgver=r127.84ae32f
 pkgrel=1
 _pkgrel=mainline
 pkgdesc='Linux-git: mainline latest build from kernel.org. No Documentation.'
@@ -17,10 +17,9 @@ makedepends=(
   xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
 )
 options=('!strip')
-_srcname=linux-${_release}
 _release="$(curl https://www.kernel.org/feeds/kdist.xml \
     | grep -m1 -Po "(?<=<item><title>)(.+?)(?=: $_pkgver)")"
-
+_srcname=linux-${_release}
 source=('https://www.kernel.org/feeds/kdist.xml'
   "https://git.kernel.org/torvalds/t/linux-${_release}.tar.gz")
 sha256sums=('SKIP'
